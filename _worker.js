@@ -6,13 +6,13 @@ import { connect } from "cloudflare:sockets";
 const DEFAULT_LOCAL_PROXIES = [
   "bpb.yousef.isegaro.com",
   "galaxytunnel.cloud-ip.cc",
-  "www.visa.com.hk",
+  "icook.tw",
   "www.visa.com.sg"
 ];
 
 const DEFAULT_DOH_URL = ["https://cloudflare-dns.com/dns-query","https://dns.google/dns-query","https://dns.quad9.net/dns-query","https://dns.adguard-dns.com/dns-query"];
 const CONNECTION_TIMEOUT_MS = 30000; // 30 seconds timeout
-const DEFAULT_RATE_LIMIT_PER_MINUTE = 500;
+const DEFAULT_RATE_LIMIT_PER_MINUTE = 60;
 const DEFAULT_WS_PATH = "galaxy-tunnel";
 const MAX_CONFIG_PATH_LENGTH = 128;
 
@@ -396,15 +396,14 @@ function isValidUUID(uuid) {
 // ============================================
 // HTML UI PAGES WITH NOINDEX META (Item 1, 11, 12)
 // ============================================
-function getGalaxyPage(host = "localhost:3000", userID = "d3b07384-d113-494a-a0e7-34fa12759e66", wsPath = "galaxy-tunnel", proxyIP = "", trojanPassword = "galaxytunnel") {
-  const configs = generateVlessConfigs(host, userID, wsPath, proxyIP, trojanPassword);
+function getGalaxyPage() {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-  <title>Galaxy-Tunnel VLESS & Trojan Console</title>
+  <title>Galaxy-Tunnel VLESS</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html {
@@ -434,26 +433,6 @@ function getGalaxyPage(host = "localhost:3000", userID = "d3b07384-d113-494a-a0e
     @keyframes starTwinkle {
       0% { opacity: 0.4; transform: scale(1); }
       100% { opacity: 0.8; transform: scale(1.02); }
-    }
-    .top-toolbar {
-      position: absolute; top: 16px; left: 16px; right: 16px;
-      z-index: 20; display: flex; justify-content: space-between; align-items: center;
-    }
-    .console-badge {
-      font-size: 11px; font-weight: 800; color: #00e5ff; letter-spacing: 1px;
-      background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3);
-      padding: 6px 14px; border-radius: 9999px; text-transform: uppercase;
-      backdrop-filter: blur(8px);
-    }
-    .nav-actions { display: flex; gap: 8px; }
-    .btn-cyber {
-      background: rgba(4, 18, 36, 0.85); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.5);
-      padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
-      cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
-      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-    }
-    .btn-cyber:hover {
-      background: rgba(0, 229, 255, 0.2); box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
     }
     .card-frame {
       position: relative; z-index: 10;
@@ -504,55 +483,11 @@ function getGalaxyPage(host = "localhost:3000", userID = "d3b07384-d113-494a-a0e
       0% { opacity: 0.8; text-shadow: 0 0 8px rgba(0,229,255,0.5); }
       100% { opacity: 1; text-shadow: 0 0 20px rgba(0,229,255,1); }
     }
-    /* Modal drawer for configs */
-    .config-modal {
-      position: fixed; inset: 0; z-index: 100;
-      background: rgba(2, 6, 13, 0.85); backdrop-filter: blur(10px);
-      display: none; align-items: center; justify-content: center; padding: 20px;
-    }
-    .config-modal.open { display: flex; }
-    .config-box {
-      width: 100%; max-width: 680px; max-height: 85vh; overflow-y: auto;
-      background: #071322; border: 1.5px solid rgba(0, 229, 255, 0.6);
-      border-radius: 12px; padding: 24px; box-shadow: 0 0 35px rgba(0, 229, 255, 0.25);
-      color: #e2e8f0;
-    }
-    .config-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-      border-bottom: 1px solid rgba(0, 229, 255, 0.2); padding-bottom: 12px;
-    }
-    .config-title { font-size: 18px; font-weight: 800; color: #00e5ff; }
-    .btn-close-box { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
-    .node-item {
-      background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px; padding: 12px; margin-bottom: 14px;
-    }
-    .node-label { font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 6px; display: flex; justify-content: space-between; }
-    .node-val {
-      font-family: monospace; font-size: 11px; color: #cbd5e1; word-break: break-all;
-      background: #02060d; padding: 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .btn-copy {
-      background: #0284c7; color: #fff; border: none; border-radius: 4px;
-      padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 600;
-    }
-    .btn-copy:hover { background: #0369a1; }
   </style>
 </head>
 <body>
   <div class="space-bg"></div>
   <div class="starfield"></div>
-
-  <div class="top-toolbar">
-    <div class="console-badge">⚡ GALAXY CONSOLE ACTIVE</div>
-    <div class="nav-actions">
-      <button class="btn-cyber" onclick="openConfigs()">⚙️ Node Configurations</button>
-      <a href="/sub" target="_blank" class="btn-cyber">📡 Subscription (/sub)</a>
-      <a href="/" class="btn-cyber">🌐 Diagnostics Portal</a>
-      <a href="/api/logout" class="btn-cyber" style="color: #f87171; border-color: rgba(248, 113, 113, 0.4);">🚪 Exit</a>
-    </div>
-  </div>
-
   <div class="card-frame" id="mainCard">
     <div class="graphic-container">
       <div class="ring"></div>
@@ -566,72 +501,7 @@ function getGalaxyPage(host = "localhost:3000", userID = "d3b07384-d113-494a-a0e
       </div>
     </div>
   </div>
-
-  <!-- Configs Drawer Modal -->
-  <div class="config-modal" id="configModal">
-    <div class="config-box">
-      <div class="config-header">
-        <div class="config-title">🚀 Tunnel Node Links &amp; Subscription</div>
-        <button class="btn-close-box" onclick="closeConfigs()">✕</button>
-      </div>
-
-      <div class="node-item">
-        <div class="node-label">
-          <span>🔒 VLESS TLS (Port 443 / Recommended)</span>
-          <button class="btn-copy" onclick="copyText('tlsConfig', this)">Copy Link</button>
-        </div>
-        <div class="node-val" id="tlsConfig">${configs.tls || 'Not configured'}</div>
-      </div>
-
-      <div class="node-item">
-        <div class="node-label">
-          <span>⚡ VLESS HTTP (Port 8080)</span>
-          <button class="btn-copy" onclick="copyText('httpConfig', this)">Copy Link</button>
-        </div>
-        <div class="node-val" id="httpConfig">${configs.http || 'Not configured'}</div>
-      </div>
-
-      ${configs.trojan ? `
-      <div class="node-item">
-        <div class="node-label">
-          <span>🛡️ Trojan TLS (Port 443)</span>
-          <button class="btn-copy" onclick="copyText('trojanConfig', this)">Copy Link</button>
-        </div>
-        <div class="node-val" id="trojanConfig">${configs.trojan}</div>
-      </div>` : ''}
-
-      <div class="node-item">
-        <div class="node-label">
-          <span>📡 Subscription URL</span>
-          <button class="btn-copy" onclick="copyText('subUrl', this)">Copy Sub Link</button>
-        </div>
-        <div class="node-val" id="subUrl">http://${host}/sub</div>
-      </div>
-
-      <div style="margin-top: 16px; font-size: 12px; color: #94a3b8; text-align: center;">
-        Compatible with v2rayN, Sing-box, Clash Meta, NekoBox, Shadowrocket, and V2Ray clients.
-      </div>
-    </div>
-  </div>
-
   <script>
-    function openConfigs() {
-      document.getElementById('configModal').classList.add('open');
-    }
-    function closeConfigs() {
-      document.getElementById('configModal').classList.remove('open');
-    }
-    function copyText(elementId, btn) {
-      const text = document.getElementById(elementId).textContent.trim();
-      navigator.clipboard.writeText(text).then(() => {
-        if (btn) {
-          const orig = btn.textContent;
-          btn.textContent = "Copied!";
-          setTimeout(() => { btn.textContent = orig; }, 1800);
-        }
-      }).catch(() => {});
-    }
-
     const canvas = document.getElementById('nodeCanvas');
     const ctx = canvas.getContext('2d');
     const numNodes = 32; const nodes = []; const radius = 75;
@@ -818,10 +688,7 @@ function getMaskPage(host = "localhost", isAuthEnabled = true, clientIp = "127.0
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EDGE-A3 GalaxyTunnel</title>
-  <meta name="description" content="High-performance EdgeTunnel VLESS and Trojan WebSocket proxy gateway with live edge diagnostics, camouflage dashboard, and subscription management.">
-  <meta property="og:title" content="EDGE-A3 GalaxyTunnel">
-  <meta property="og:description" content="High-performance EdgeTunnel VLESS and Trojan WebSocket proxy gateway with live edge diagnostics, camouflage dashboard, and subscription management.">
+  <title>EdgeTunnel Cloud | Edge Network & Diagnostics</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -1217,7 +1084,7 @@ function getMaskPage(host = "localhost", isAuthEnabled = true, clientIp = "127.0
         </div>
         <div class="info-row">
           <span class="info-k">HTTP Protocol:</span>
-          <span class="info-v">HTTP/2 &amp; HTTP/3 Edge</span>
+          <span class="info-v">HTTP/2 &amp; HTTP/3 (QUIC)</span>
         </div>
         <div class="info-row">
           <span class="info-k">Encryption &amp; Cipher:</span>
@@ -1261,7 +1128,7 @@ function getMaskPage(host = "localhost", isAuthEnabled = true, clientIp = "127.0
         <button class="btn-close" onclick="closePortalModal()">✕</button>
       </div>
       <p style="font-size: 13px; color: #64748b; margin-bottom: 14px; line-height: 1.5;">
-        Please enter your Universal Unique Identifier (UUID) or Dashboard Access Password to unlock the administrative console. <span style="display:block; margin-top:4px; color:#0284c7; font-weight:600;">(Default access: password &ldquo;admin&rdquo; or UUID)</span>
+        Please enter your Universal Unique Identifier (UUID) or Dashboard Access Password to unlock the administrative console.
       </p>
       <form onsubmit="handlePortalLogin(event)">
         <input type="password" id="authKeyInput" class="modal-input" placeholder="Enter UUID or Password" required autofocus />
@@ -1398,10 +1265,8 @@ function generateVlessConfigs(host, uuid, wsPath, proxyIP = "", trojanPassword =
   const encodedPath = `%2F${encodeURIComponent(cleanPath)}%3Fed%3D2048`;
   const titleHost = cleanHost.replace(/[^a-zA-Z0-9.-]/g, "");
 
-  const tls = cleanUuid && isValidUUID(cleanUuid)
-    ? `vless://${cleanUuid}@${cleanHost}:443?encryption=none&security=tls&sni=${cleanHost}&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-TLS%20(${titleHost})`
-    : "";
-  const configs = tls ? [tls] : [];
+  const tls = `vless://${cleanUuid}@${cleanHost}:443?encryption=none&security=tls&sni=${cleanHost}&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-TLS%20(${titleHost})`;
+  const configs = [tls];
 
   // CMLiu-style edge address mode: connect to the proxy/edge address while
   // preserving the Worker hostname in Host/SNI so no custom DNS setup is
@@ -1409,11 +1274,17 @@ function generateVlessConfigs(host, uuid, wsPath, proxyIP = "", trojanPassword =
   const cleanProxy = String(proxyIP || "").trim().split(/[\s,]+/)[0]
     .replace(/^\[/, "").replace(/\](:\d+)?$/, "").replace(/:\d+$/, "");
   const edgeAddress = cleanProxy || cleanHost;
-  const ws8080 = `vless://${cleanUuid}@${edgeAddress}:8080?encryption=none&security=none&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-WS-8080%20(${edgeAddress})`;
-  if (tls) configs.push(ws8080);
+  // Cloudflare-supported HTTP/WS edge ports. These are separate client
+  // entry points; the Worker still opens the VLESS destination TCP port from
+  // the request header. They do not turn plaintext WS into TLS/WSS.
+  const noTlsPorts = [80, 8080, 8880, 2052, 2082, 2086, 2095];
+  const noTlsConfigs = noTlsPorts.map((port) =>
+    `vless://${cleanUuid}@${edgeAddress}:${port}?encryption=none&security=none&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-WS-${port}%20(${edgeAddress})`
+  );
+  configs.push(...noTlsConfigs);
 
   if (cleanProxy && !isPrivateOrBlockedHost(cleanProxy)) {
-    if (tls) configs.push(`vless://${cleanUuid}@${cleanProxy}:443?encryption=none&security=tls&sni=${cleanHost}&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-ProxyIP%20(${cleanProxy})`);
+    configs.push(`vless://${cleanUuid}@${cleanProxy}:443?encryption=none&security=tls&sni=${cleanHost}&type=ws&host=${cleanHost}&path=${encodedPath}#Galaxy-ProxyIP%20(${cleanProxy})`);
   }
 
   const cleanTrojanPassword = String(trojanPassword || "").trim();
@@ -1424,7 +1295,7 @@ function generateVlessConfigs(host, uuid, wsPath, proxyIP = "", trojanPassword =
 
   return {
     tls,
-    http: ws8080,
+    http: noTlsConfigs.find((item) => item.includes(":8080?")) || noTlsConfigs[0] || "",
     proxy: configs.find((item) => item.includes("Galaxy-ProxyIP")) || "",
     trojan,
     plainList: configs.join("\n"),
@@ -1463,13 +1334,13 @@ const worker_default = {
     const pathname = url.pathname.replace(/^\/+|\/+$/g, "");
 
     // Load configurations from env (Item 2: fully configurable via wrangler.toml / env)
-    const userID = env.UUID || env.uuid || "d3b07384-d113-494a-a0e7-34fa12759e66";
+    const userID = env.UUID || env.uuid || "";
     const proxyIP = env.PROXYIP || env.proxyip || env.PROXY_IP || DEFAULT_LOCAL_PROXIES[0];
     const rawProxyListUrl = env.PROXY_LIST_URL || "";
     const dohURL = env.DNS_RESOLVER_URL || DEFAULT_DOH_URL;
     const configuredWsPath = normalizeWsPath(env.WS_PATH || DEFAULT_WS_PATH);
-    const envPassword = String(env.PASSWORD || env.password || "admin").trim();
-    const trojanPassword = String(env.TROJAN_PASSWORD || env.trojan_password || "galaxytunnel").trim();
+    const envPassword = String(env.PASSWORD || env.password || "").trim();
+    const trojanPassword = String(env.TROJAN_PASSWORD || env.trojan_password || "").trim();
     const routeRulesRaw = env.ROUTE_RULES || "";
     const routeServersRaw = env.ROUTE_SERVERS || "";
 
@@ -1479,7 +1350,7 @@ const worker_default = {
       return new Response(
         JSON.stringify({
           status: "healthy",
-          service: "galaxy-tunnel-vless-trojan-ws",
+          service: "galaxy-tunnel-vless",
           timestamp: new Date().toISOString(),
           uuidConfigured: isValidUUID(userID),
           proxyPoolSize: proxyPoolManager.getPoolSize(),
@@ -1538,9 +1409,9 @@ const worker_default = {
 
     // Base64 VLESS subscription (TLS/443, HTTP/80, optional safe ProxyIP)
     if (url.pathname === "/sub" && request.method === "GET") {
-      if (!isValidUUID(userID) && !trojanPassword) {
-        logger.warn("SUBSCRIPTION_REQUEST_WITHOUT_CREDENTIALS");
-        return new Response("UUID or TROJAN_PASSWORD is not configured", {
+      if (!isValidUUID(userID)) {
+        logger.warn("SUBSCRIPTION_REQUEST_WITHOUT_UUID");
+        return new Response("UUID is not configured", {
           status: 401,
           headers: getSecurityHeaders("text/plain; charset=utf-8")
         });
@@ -1571,8 +1442,8 @@ const worker_default = {
         });
       }
 
-      // VLESS requires UUID; Trojan requires TROJAN_PASSWORD.
-      if (!isValidUUID(userID) && !trojanPassword) {
+      // Check UUID validity for WebSocket upgrade (Item 1)
+      if (!isValidUUID(userID)) {
         logger.warn("WS_ATTEMPT_WITHOUT_UUID");
         return new Response(getUnauthorizedPage(), {
           status: 401,
@@ -1583,7 +1454,6 @@ const worker_default = {
       return await proxyOverWSHandler(
         request,
         userID,
-        trojanPassword,
         proxyIP,
         rawProxyListUrl,
         dohURL,
@@ -1601,8 +1471,7 @@ const worker_default = {
 
     if (directUuidPath || hasAuthCookie) {
       logger.info("GALAXY_PAGE_SERVED");
-      const pageHost = request.headers.get("Host") || url.host;
-      return new Response(getGalaxyPage(pageHost, userID, configuredWsPath, proxyIP, trojanPassword), {
+      return new Response(getGalaxyPage(), {
         status: 200,
         headers: getSecurityHeaders("text/html; charset=utf-8")
       });
@@ -1632,7 +1501,6 @@ const worker_default = {
 async function proxyOverWSHandler(
   request,
   userID,
-  trojanPassword,
   defaultProxy,
   rawProxyListUrl,
   dohURL,
@@ -1653,8 +1521,6 @@ async function proxyOverWSHandler(
   const remoteSocketWrapper = { value: null };
   let udpStreamWrite = null;
   let isDns = false;
-  let protocolMode = null;
-  let initialBuffer = new Uint8Array(0);
 
   readableWebSocketStream.pipeTo(
     new WritableStream({
@@ -1669,25 +1535,11 @@ async function proxyOverWSHandler(
           return;
         }
 
-        // Detect the protocol from the first byte and retain fragmented Trojan headers.
-        const incoming = chunk instanceof ArrayBuffer ? new Uint8Array(chunk) : new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-        if (!protocolMode) {
-          protocolMode = incoming[0] === 0 ? "vless" : "trojan";
-        }
-        let result;
-        let headerBuffer = chunk;
-        if (protocolMode === "trojan") {
-          initialBuffer = concatUint8Arrays(initialBuffer, incoming);
-          if (initialBuffer.length > 8192) throw new Error("Trojan header is too large");
-          result = processTrojanHeader(initialBuffer.buffer, trojanPassword);
-          if (result.incomplete) return;
-          headerBuffer = initialBuffer.buffer;
-        } else {
-          result = processVlessHeader(chunk, userID);
-        }
+        // Process VLESS Protocol Header
+        const result = processVlessHeader(chunk, userID);
 
         if (result.hasError) {
-          logger.error(`${protocolMode.toUpperCase()}_HEADER_ERROR`, { message: result.message });
+          logger.error("VLESS_HEADER_ERROR", { message: result.message });
           throw new Error(result.message);
         }
 
@@ -1710,7 +1562,7 @@ async function proxyOverWSHandler(
           isDns = true;
         }
 
-        const rawClientData = headerBuffer.slice(rawDataIndex);
+        const rawClientData = chunk.slice(rawDataIndex);
 
         if (isDns) {
           const { write } = await handleUDPOutBound(webSocket, responseHeader, dohURL, logger);
@@ -2001,144 +1853,6 @@ function base64ToArrayBuffer(base64Str) {
   } catch (error) {
     return { earlyData: null, error };
   }
-}
-
-// ============================================
-// TROJAN TCP HEADER SUPPORT
-// Trojan uses SHA-224(password) + CRLF and a SOCKS5-style CONNECT request.
-// General raw UDP/QUIC is not available through Cloudflare Workers sockets.
-// ============================================
-const SHA256_K = [
-  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
-  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
-  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
-  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
-  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
-  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
-  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
-];
-
-function sha224Hex(value) {
-  const input = new TextEncoder().encode(String(value));
-  const bitLength = input.length * 8;
-  const paddedLength = ((input.length + 9 + 63) >> 6) << 6;
-  const data = new Uint8Array(paddedLength);
-  data.set(input); data[input.length] = 0x80;
-  const view = new DataView(data.buffer);
-  const lengthOffset = paddedLength - 8;
-  view.setUint32(lengthOffset, Math.floor(bitLength / 0x100000000));
-  view.setUint32(lengthOffset + 4, bitLength >>> 0);
-  let h = [0xc1059ed8,0x367cd507,0x3070dd17,0xf70e5939,0xffc00b31,0x68581511,0x64f98fa7,0xbefa4fa4];
-  const rotr = (x,n) => (x >>> n) | (x << (32 - n));
-  for (let offset = 0; offset < data.length; offset += 64) {
-    const w = new Uint32Array(64); const block = new DataView(data.buffer, offset, 64);
-    for (let i = 0; i < 16; i++) w[i] = block.getUint32(i * 4);
-    for (let i = 16; i < 64; i++) {
-      const s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15] >>> 3);
-      const s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2] >>> 10);
-      w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
-    }
-    let [a,b,c,d,e,f,g,hh] = h;
-    for (let i = 0; i < 64; i++) {
-      const s1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
-      const ch = (e & f) ^ (~e & g);
-      const t1 = (hh + s1 + ch + SHA256_K[i] + w[i]) >>> 0;
-      const s0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
-      const maj = (a & b) ^ (a & c) ^ (b & c);
-      const t2 = (s0 + maj) >>> 0;
-      [hh,g,f,e,d,c,b,a] = [g,f,e,(d+t1)>>>0,c,b,a,(t1+t2)>>>0];
-    }
-    h = h.map((value, i) => (value + [a,b,c,d,e,f,g,hh][i]) >>> 0);
-  }
-  return h.slice(0, 7).map((word) => word.toString(16).padStart(8, "0")).join("");
-}
-
-function constantTimeEqualText(left, right) {
-  if (left.length !== right.length) return false;
-  let diff = 0;
-  for (let i = 0; i < left.length; i++) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
-  return diff === 0;
-}
-
-function concatUint8Arrays(first, second) {
-  const output = new Uint8Array(first.length + second.length);
-  output.set(first); output.set(second, first.length); return output;
-}
-
-function processTrojanHeader(buffer, password) {
-  if (buffer.byteLength < 58) return { incomplete: true };
-  const bytes = new Uint8Array(buffer);
-  const credential = new TextDecoder().decode(bytes.slice(0, 56));
-  if (!/^[0-9a-f]{56}$/i.test(credential) || bytes[56] !== 13 || bytes[57] !== 10) {
-    return { hasError: true, message: "Invalid Trojan credential header" };
-  }
-
-  const passwords = password.includes(",") ? password.split(",") : [password];
-  const isValidTrojan = passwords.some((p) => {
-    const trimmed = p.trim().toLowerCase();
-    if (/^[0-9a-f]{56}$/i.test(trimmed) && constantTimeEqualText(credential.toLowerCase(), trimmed)) {
-      return true;
-    }
-    return constantTimeEqualText(credential.toLowerCase(), sha224Hex(p.trim()));
-  });
-  if (!isValidTrojan) {
-    return { hasError: true, message: "Invalid Trojan password" };
-  }
-
-  if (buffer.byteLength < 62) return { incomplete: true };
-  const command = bytes[58];
-  if (command !== 1) return { hasError: true, message: "Trojan UDP/QUIC is not supported by this Worker" };
-  if (bytes[59] !== 1 && bytes[59] !== 3 && bytes[59] !== 4) {
-    return { hasError: true, message: `Invalid Trojan address type ${bytes[59]}` };
-  }
-
-  let index = 60;
-  let address = "";
-  if (bytes[59] === 1) {
-    if (bytes.length < index + 6) return { incomplete: true };
-    address = Array.from(bytes.slice(index, index + 4)).join(".");
-    index += 4;
-  } else if (bytes[59] === 3) {
-    if (bytes.length < index + 1) return { incomplete: true };
-    const length = bytes[index++];
-    if (bytes.length < index + length + 2) return { incomplete: true };
-    address = new TextDecoder().decode(bytes.slice(index, index + length));
-    index += length;
-  } else if (bytes[59] === 4) {
-    if (bytes.length < index + 18) return { incomplete: true };
-    const dataView = new DataView(bytes.buffer, bytes.byteOffset + index, 16);
-    const rawHextets = [];
-    for (let i = 0; i < 8; i++) {
-      rawHextets.push(dataView.getUint16(i * 2));
-    }
-    address = formatIPv6(rawHextets);
-    index += 16;
-  }
-
-  if (bytes.length < index + 2) return { incomplete: true };
-  const port = new DataView(bytes.buffer, bytes.byteOffset + index, 2).getUint16(0);
-
-  // Standard Trojan protocol format:
-  // [56 bytes hex][\r\n][CMD 1B][ATYP 1B][ADDR][PORT 2B][\r\n 2B][PAYLOAD]
-  // The CRLF after the port MUST be skipped so the payload (e.g. TLS ClientHello) isn't corrupted.
-  let rawDataIndex = index + 2;
-  if (bytes.length >= rawDataIndex + 2 && bytes[rawDataIndex] === 13 && bytes[rawDataIndex + 1] === 10) {
-    rawDataIndex += 2;
-  } else if (bytes.length < rawDataIndex + 2) {
-    // Wait for the trailing CRLF if chunk boundary splits here
-    return { incomplete: true };
-  }
-
-  return {
-    hasError: false,
-    addressRemote: address,
-    portRemote: port,
-    rawDataIndex,
-    responseHeader: null,
-    isUDP: false,
-    protocol: "trojan"
-  };
 }
 
 const byteToHex = [];

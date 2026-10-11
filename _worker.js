@@ -1,4 +1,4 @@
-import { connect } from "./lib/sockets.js";
+import { connect } from "cloudflare:sockets";
 
 // ============================================
 // CONSTANTS & DEFAULT CONFIGURATION
